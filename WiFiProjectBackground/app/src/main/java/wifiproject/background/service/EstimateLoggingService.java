@@ -80,7 +80,7 @@ public class EstimateLoggingService extends Service {
 
             notificationBuilder = new NotificationCompat.Builder(getApplicationContext(), "channel")
                     .setSmallIcon(R.drawable.wifilocation)
-                    .setContentTitle("Kulry Background")
+                    .setContentTitle("WiFiLocation Background")
                     .setContentIntent(pendingIntent)
                     .setContentText("실행 중...");
 
