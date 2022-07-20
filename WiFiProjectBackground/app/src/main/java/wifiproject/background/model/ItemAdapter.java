@@ -9,12 +9,13 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import wifilocation.background.R;
 
 
 public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
-    ArrayList<ItemInfo> items = new ArrayList<ItemInfo>();
+    List<ItemInfo> items = new ArrayList<ItemInfo>();
 
     @NonNull
     @Override
@@ -41,11 +42,11 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ViewHolder> {
         items.add(item);
     }
 
-    public ArrayList<ItemInfo> getItems() {
+    public List<ItemInfo> getItems() {
         return items;
     }
 
-    public void setItems(ArrayList<ItemInfo> items) {
+    public void setItems(List<ItemInfo> items) {
         this.items = items;
     }
 

@@ -34,7 +34,7 @@ public class EstimateLoggingService extends Service {
 
     Context context;
     WifiManager wm;
-    ArrayList<ItemInfo> items = new ArrayList<>();
+    List<ItemInfo> items = new ArrayList<>();
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -134,6 +134,7 @@ public class EstimateLoggingService extends Service {
     }
 
     private void scanSuccess() {
+        items.clear();
         List<ScanResult> results = wm.getScanResults();
         for (ScanResult result : results) {
 //            if (!result.SSID.equalsIgnoreCase("WiFiLocation@PDA")) continue;
