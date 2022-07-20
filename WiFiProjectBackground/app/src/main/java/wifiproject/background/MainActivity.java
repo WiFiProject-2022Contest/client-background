@@ -21,7 +21,8 @@ import wifilocation.background.service.EstimateLoggingService;
 public class MainActivity extends AppCompatActivity {
 
     Intent serviceIntent;
-    public static String building = "WiFiLocation@PDA";
+    public static String building = "WiFiLocation3F";
+    public static String ssid = "WiFiLocation@PDA";
     public static String uuid = ".";
 
     String[] PERMISSIONS = {

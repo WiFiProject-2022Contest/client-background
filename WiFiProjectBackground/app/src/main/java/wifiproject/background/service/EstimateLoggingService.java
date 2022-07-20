@@ -13,7 +13,6 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
@@ -23,7 +22,9 @@ import java.util.List;
 
 import wifilocation.background.MainActivity;
 import wifilocation.background.R;
-import wifilocation.background.model.ItemAdapter;
+import wifilocation.background.database.DatabaseHelper;
+import wifilocation.background.estimate.EstimatedResult;
+import wifilocation.background.estimate.PositioningAlgorithm;
 import wifilocation.background.model.ItemInfo;
 
 public class EstimateLoggingService extends Service {
@@ -35,6 +36,9 @@ public class EstimateLoggingService extends Service {
     Context context;
     WifiManager wm;
     List<ItemInfo> items = new ArrayList<>();
+    List<ItemInfo> savedItemInfos = new ArrayList<>();
+
+    final static double standardRecordDistance = 8;
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -137,13 +141,39 @@ public class EstimateLoggingService extends Service {
         items.clear();
         List<ScanResult> results = wm.getScanResults();
         for (ScanResult result : results) {
-//            if (!result.SSID.equalsIgnoreCase("WiFiLocation@PDA")) continue;
             items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi"));
         }
+        // 스캔한 결과로 측정한 결과 local db에 push
+        List<EstimatedResult> estimatedResults = getEstimatedResults();
+        pushEstimatedResultsToLocal(estimatedResults, 1);
     }
 
     private void scanFailure() {
         Toast.makeText(context, "WiFi Scan failed.", Toast.LENGTH_SHORT).show();
         wm.getScanResults();
+    }
+
+    private List<EstimatedResult> getEstimatedResults() {
+        savedItemInfos = searchItemInfoFromLocal();
+
+        List<EstimatedResult> results = new ArrayList<>();
+        // 2ghz
+        results.add(PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 2, standardRecordDistance));
+        // 5ghz
+        results.add(PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 5, standardRecordDistance));
+
+        return results;
+    }
+
+    private List<ItemInfo> searchItemInfoFromLocal() {
+        DatabaseHelper dbHelper = new DatabaseHelper(context);
+        List<ItemInfo> savedWiFiItemInfos = dbHelper.searchFromWiFiInfo(MainActivity.building, MainActivity.ssid, null, null, null, null, null);
+
+        return savedWiFiItemInfos;
+    }
+
+    private void pushEstimatedResultsToLocal(List<EstimatedResult> estimatedResults, Integer _new) {
+        DatabaseHelper dbHelper = new DatabaseHelper(context);
+        dbHelper.insertIntoFingerprint(estimatedResults, (_new == null ? 0 : 1));
     }
 }
