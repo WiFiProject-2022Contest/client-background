@@ -13,20 +13,18 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
-import androidx.room.Room;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import wifilocation.background.MainActivity;
 import wifilocation.background.R;
-import wifilocation.background.database.AppDatabase;
-import wifilocation.background.database.EstimatedResult;
-import wifilocation.background.database.ItemInfo;
-import wifilocation.background.estimate.PositioningAlgorithm;
+import wifilocation.background.model.ItemAdapter;
+import wifilocation.background.model.ItemInfo;
 
 public class EstimateLoggingService extends Service {
 
@@ -37,9 +35,6 @@ public class EstimateLoggingService extends Service {
     Context context;
     WifiManager wm;
     List<ItemInfo> items = new ArrayList<>();
-    List<ItemInfo> savedItemInfos = new ArrayList<>();
-
-    final static double standardRecordDistance = 8;
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -57,9 +52,19 @@ public class EstimateLoggingService extends Service {
         }
     };
 
-    AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "wifilocation1.db").build();
-
     public EstimateLoggingService() {}
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        context = this;
+        wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+        context.registerReceiver(wifi_receiver, filter);
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -71,13 +76,6 @@ public class EstimateLoggingService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Intent testIntent = new Intent(getApplicationContext(), MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, testIntent, PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        context = this;
-        wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-        context.registerReceiver(wifi_receiver, filter);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("channel", "play", NotificationManager.IMPORTANCE_DEFAULT);
@@ -91,11 +89,16 @@ public class EstimateLoggingService extends Service {
                     .setContentIntent(pendingIntent)
                     .setContentText("실행 중...");
 
-            notificationManager.notify(1, notificationBuilder.build());
-            estimateLoggingTask.execute();
+            try {
+                notificationManager.notify(1, notificationBuilder.build());
+                estimateLoggingTask.execute();
+                Toast.makeText(context, "로깅 시작...", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(context, "이미 실행 중입니다!", Toast.LENGTH_SHORT).show();
+            }
 
             return START_STICKY;
-//            startForeground(1, notificationBuilder.build());
+            // startForeground(1, notificationBuilder.build());
         }
 
         return super.onStartCommand(intent, flags, startId);
@@ -136,6 +139,8 @@ public class EstimateLoggingService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
+        Toast.makeText(context, "로깅 중지...", Toast.LENGTH_SHORT).show();
+        context.unregisterReceiver(wifi_receiver);
         estimateLoggingTask.cancel(true);
         notificationManager.cancel(1);
     }
@@ -144,27 +149,14 @@ public class EstimateLoggingService extends Service {
         items.clear();
         List<ScanResult> results = wm.getScanResults();
         for (ScanResult result : results) {
-            items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi", 1));
+//            if (!result.SSID.equalsIgnoreCase("WiFiLocation@PDA")) continue;
+            items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi"));
         }
-        // 스캔한 결과로 측정한 결과 local db에 push
-        List<EstimatedResult> estimatedResults = getEstimatedResults();
-        db.estimatedResultDao().insertAll(estimatedResults);
+        Toast.makeText(context, "WiFi Scan Success!.", Toast.LENGTH_SHORT).show();
     }
 
     private void scanFailure() {
         Toast.makeText(context, "WiFi Scan failed.", Toast.LENGTH_SHORT).show();
         wm.getScanResults();
-    }
-
-    private List<EstimatedResult> getEstimatedResults() {
-        savedItemInfos = db.itemInfoDao().loadAllItems();
-
-        List<EstimatedResult> results = new ArrayList<>();
-        // 2ghz
-        results.add(PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 2, standardRecordDistance));
-        // 5ghz
-        results.add(PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 5, standardRecordDistance));
-
-        return results;
     }
 }

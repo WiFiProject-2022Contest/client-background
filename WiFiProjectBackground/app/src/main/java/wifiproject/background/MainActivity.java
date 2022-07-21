@@ -34,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.BLUETOOTH_ADMIN,
             Manifest.permission.BLUETOOTH_CONNECT,
             Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.READ_PHONE_STATE
     };
 
     @Override
