@@ -84,11 +84,15 @@ public class EstimateLoggingService extends Service {
                     .setContentIntent(pendingIntent)
                     .setContentText("실행 중...");
 
-            notificationManager.notify(1, notificationBuilder.build());
-            estimateLoggingTask.execute();
+            try {
+                notificationManager.notify(1, notificationBuilder.build());
+                estimateLoggingTask.execute();
+            } catch (Exception e) {
+                Toast.makeText(context, "이미 실행 중입니다!", Toast.LENGTH_SHORT).show();
+            }
 
             return START_STICKY;
-//            startForeground(1, notificationBuilder.build());
+            // startForeground(1, notificationBuilder.build());
         }
 
         return super.onStartCommand(intent, flags, startId);
@@ -106,6 +110,9 @@ public class EstimateLoggingService extends Service {
             while (!isCancelled()) {
                 try {
                     wm.startScan();
+                    for(int i=0; i<items.size(); i++) {
+                        Log.d("items", items.get(i).getSSID());
+                    }
                     Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
