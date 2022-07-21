@@ -55,6 +55,18 @@ public class EstimateLoggingService extends Service {
     public EstimateLoggingService() {}
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+
+        context = this;
+        wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+        context.registerReceiver(wifi_receiver, filter);
+    }
+
+    @Override
     public IBinder onBind(Intent intent) {
         // TODO: Return the communication channel to the service.
         throw new UnsupportedOperationException("Not yet implemented");
@@ -64,13 +76,6 @@ public class EstimateLoggingService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Intent testIntent = new Intent(getApplicationContext(), MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, testIntent, PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        context = this;
-        wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-        context.registerReceiver(wifi_receiver, filter);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("channel", "play", NotificationManager.IMPORTANCE_DEFAULT);
@@ -87,6 +92,7 @@ public class EstimateLoggingService extends Service {
             try {
                 notificationManager.notify(1, notificationBuilder.build());
                 estimateLoggingTask.execute();
+                Toast.makeText(context, "로깅 시작...", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 Toast.makeText(context, "이미 실행 중입니다!", Toast.LENGTH_SHORT).show();
             }
@@ -110,9 +116,6 @@ public class EstimateLoggingService extends Service {
             while (!isCancelled()) {
                 try {
                     wm.startScan();
-                    for(int i=0; i<items.size(); i++) {
-                        Log.d("items", items.get(i).getSSID());
-                    }
                     Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -136,6 +139,8 @@ public class EstimateLoggingService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
+        Toast.makeText(context, "로깅 중지...", Toast.LENGTH_SHORT).show();
+        context.unregisterReceiver(wifi_receiver);
         estimateLoggingTask.cancel(true);
         notificationManager.cancel(1);
     }
@@ -147,6 +152,7 @@ public class EstimateLoggingService extends Service {
 //            if (!result.SSID.equalsIgnoreCase("WiFiLocation@PDA")) continue;
             items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi"));
         }
+        Toast.makeText(context, "WiFi Scan Success!.", Toast.LENGTH_SHORT).show();
     }
 
     private void scanFailure() {
