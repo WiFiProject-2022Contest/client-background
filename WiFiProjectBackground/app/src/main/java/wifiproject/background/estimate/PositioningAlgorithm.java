@@ -9,7 +9,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import wifilocation.background.model.ItemInfo;
+import wifilocation.background.database.EstimatedResult;
+import wifilocation.background.database.ItemInfo;
 
 public class PositioningAlgorithm {
     static List<RecordPoint> tp;
@@ -99,8 +100,8 @@ public class PositioningAlgorithm {
             return null;
         }
 
-        estimatedResult.setPositionEstimatedX(positionResult[0]);
-        estimatedResult.setPositionEstimatedY(positionResult[1]);
+        estimatedResult.setEst_x(positionResult[0]);
+        estimatedResult.setEst_y(positionResult[1]);
 
         return estimatedResult;
     }
@@ -112,19 +113,19 @@ public class PositioningAlgorithm {
             RecordPoint workingRP = null;
 
             // 유사 위치를 동일 좌표로 간주하기 위해서 스캔 좌표 소수점을 반올림 처리 (현실적 판단)
-            databaseRow.setX(Math.round(databaseRow.getX()));
-            databaseRow.setY(Math.round(databaseRow.getY()));
+            databaseRow.setPos_x((float) Math.round(databaseRow.getPos_x()));
+            databaseRow.setPos_y((float) Math.round(databaseRow.getPos_y()));
 
             if (!targetBuilding.equals(databaseRow.getBuilding())
                     || !method.equals(databaseRow.getMethod())
                     || !targetSSID.equals(databaseRow.getSSID())
                     || method.equals("WiFi") && databaseRow.getFrequency() / 1000 != targetGHZ
-                    || databaseRow.getRSSI() < minDbm) {
+                    || databaseRow.getLevel() < minDbm) {
                 continue;
             }
 
             for (RecordPoint recordPoint : rp) {
-                if (databaseRow.getX() == recordPoint.getLocation()[0] && databaseRow.getY() == recordPoint.getLocation()[1]) {
+                if (databaseRow.getPos_x() == recordPoint.getLocation()[0] && databaseRow.getPos_y() == recordPoint.getLocation()[1]) {
                     workingRP = recordPoint;
 
                     break;
@@ -132,10 +133,10 @@ public class PositioningAlgorithm {
             }
 
             if (workingRP == null) {
-                workingRP = new RecordPoint(new double[] {databaseRow.getX(), databaseRow.getY()});
+                workingRP = new RecordPoint(new double[] {databaseRow.getPos_x(), databaseRow.getPos_y()});
                 rp.add(workingRP);
             }
-            workingRP.getRSSI().put(databaseRow.getBSSID(), databaseRow.getRSSI());
+            workingRP.getRSSI().put(databaseRow.getBSSID(), databaseRow.getLevel());
         }
 
         return rp;

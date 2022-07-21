@@ -16,16 +16,17 @@ import android.os.IBinder;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.room.Room;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import wifilocation.background.MainActivity;
 import wifilocation.background.R;
-import wifilocation.background.database.DatabaseHelper;
-import wifilocation.background.estimate.EstimatedResult;
+import wifilocation.background.database.AppDatabase;
+import wifilocation.background.database.EstimatedResult;
+import wifilocation.background.database.ItemInfo;
 import wifilocation.background.estimate.PositioningAlgorithm;
-import wifilocation.background.model.ItemInfo;
 
 public class EstimateLoggingService extends Service {
 
@@ -55,6 +56,8 @@ public class EstimateLoggingService extends Service {
             }
         }
     };
+
+    AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "wifilocation1.db").build();
 
     public EstimateLoggingService() {}
 
@@ -141,11 +144,11 @@ public class EstimateLoggingService extends Service {
         items.clear();
         List<ScanResult> results = wm.getScanResults();
         for (ScanResult result : results) {
-            items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi"));
+            items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi", 1));
         }
         // 스캔한 결과로 측정한 결과 local db에 push
         List<EstimatedResult> estimatedResults = getEstimatedResults();
-        pushEstimatedResultsToLocal(estimatedResults, 1);
+        db.estimatedResultDao().insertAll(estimatedResults);
     }
 
     private void scanFailure() {
@@ -154,7 +157,7 @@ public class EstimateLoggingService extends Service {
     }
 
     private List<EstimatedResult> getEstimatedResults() {
-        savedItemInfos = searchItemInfoFromLocal();
+        savedItemInfos = db.itemInfoDao().loadAllItems();
 
         List<EstimatedResult> results = new ArrayList<>();
         // 2ghz
@@ -163,17 +166,5 @@ public class EstimateLoggingService extends Service {
         results.add(PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 5, standardRecordDistance));
 
         return results;
-    }
-
-    private List<ItemInfo> searchItemInfoFromLocal() {
-        DatabaseHelper dbHelper = new DatabaseHelper(context);
-        List<ItemInfo> savedWiFiItemInfos = dbHelper.searchFromWiFiInfo(MainActivity.building, MainActivity.ssid, null, null, null, null, null);
-
-        return savedWiFiItemInfos;
-    }
-
-    private void pushEstimatedResultsToLocal(List<EstimatedResult> estimatedResults, Integer _new) {
-        DatabaseHelper dbHelper = new DatabaseHelper(context);
-        dbHelper.insertIntoFingerprint(estimatedResults, (_new == null ? 0 : 1));
     }
 }
