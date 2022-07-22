@@ -1,5 +1,6 @@
 package wifilocation.background.database;
 
+import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
 
@@ -9,6 +10,7 @@ import java.util.List;
 /**
  * fingerprint 테이블 DAO
  */
+@Dao
 public interface EstimatedResultDao {
 
     /**

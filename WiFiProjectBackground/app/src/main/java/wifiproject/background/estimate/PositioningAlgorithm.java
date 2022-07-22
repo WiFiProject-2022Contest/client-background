@@ -36,41 +36,19 @@ public class PositioningAlgorithm {
             K = 7;
             minValidAPNum = 1;
             minDbm = -55;
-        }
-        else if (method.equals("BLE")) {
+        } else if (method.equals("BLE")) {
             K = 3;
             minValidAPNum = 1;
             minDbm = -70;
-        }
-        else if (method.equals("iBeacon")) {
+        } else if (method.equals("iBeacon")) {
             K = 3;
             minValidAPNum = 1;
             minDbm = -70;
-        }
-        else {
+        } else {
             return null;
         }
 
         return runKNN(userData, databaseData, targetBuilding, targetSSID, targetUUID, method, targetGHZ, standardRecordDistance, K, minValidAPNum, minDbm);
-    }
-
-    public static List<EstimatedResult> runRange(List<ItemInfo> userData, List<ItemInfo> databaseData, String targetBuilding, String targetSSID, String targetUUID, String method, int targetGHZ, double standardRecordDistance,
-                                                 int[] infoK, int[] infoMinValidAPNum, int[] infoMinDbm) {
-        List<EstimatedResult> results = new ArrayList<>();
-
-        for (int K = infoK[0]; K < infoK[1]; K += infoK[2]) {
-            for (int minValidAPNum = infoMinValidAPNum[0]; minValidAPNum < infoMinValidAPNum[1]; minValidAPNum += infoMinValidAPNum[2]) {
-                for (int minDbm = infoMinDbm[0]; minDbm < infoMinDbm[1]; minDbm += infoMinDbm[2]) {
-                    EstimatedResult result = runKNN(userData, databaseData, targetBuilding, targetSSID, targetUUID, method, targetGHZ, standardRecordDistance, K, minValidAPNum, minDbm);
-
-                    if (result != null) {
-                        results.add(result);
-                    }
-                }
-            }
-        }
-
-        return results;
     }
 
     public static EstimatedResult runKNN(List<ItemInfo> userData, List<ItemInfo> databaseData, String targetBuilding, String targetSSID, String targetUUID, String method, int targetGHZ, double standardRecordDistance, int K, int minValidAPNum, int minDbm) {
@@ -95,7 +73,7 @@ public class PositioningAlgorithm {
 
         // 변환된 정보를 함수에 넣어서 추정값을 반환받습니다.
         EstimatedResult estimatedResult = new EstimatedResult(targetBuilding, targetSSID, targetUUID, method + "-" + targetGHZ + "Ghz", K, minDbm, 1);
-        double[] positionResult = estimate(tp.get(0), rp, K, minValidAPNum, minDbm, standardRecordDistance, estimatedResult.getEstimateReason());
+        double[] positionResult = estimate(tp.get(0), rp, K, minValidAPNum, minDbm, standardRecordDistance);
         if (positionResult == null) {
             return null;
         }
@@ -133,7 +111,7 @@ public class PositioningAlgorithm {
             }
 
             if (workingRP == null) {
-                workingRP = new RecordPoint(new double[] {databaseRow.getPos_x(), databaseRow.getPos_y()});
+                workingRP = new RecordPoint(new double[]{databaseRow.getPos_x(), databaseRow.getPos_y()});
                 rp.add(workingRP);
             }
             workingRP.getRSSI().put(databaseRow.getBSSID(), databaseRow.getLevel());
@@ -142,9 +120,9 @@ public class PositioningAlgorithm {
         return rp;
     }
 
-    static double[] estimate(RecordPoint tp, List<RecordPoint> rp, int K, int minValidAPNum, int minDbm, double standardRecordDistance, StringBuilder estimateReason) {
+    static double[] estimate(RecordPoint tp, List<RecordPoint> rp, int K, int minValidAPNum, int minDbm, double standardRecordDistance) {
         List<RecordPoint> vrp = interpolation(rp, standardRecordDistance);
-        return weightedKNN(tp, vrp, K, minValidAPNum, minDbm, estimateReason);
+        return weightedKNN(tp, vrp, K, minValidAPNum, minDbm);
     }
 
     static List<RecordPoint> interpolation(List<RecordPoint> rp, double standardRecordDistance) {
@@ -179,7 +157,7 @@ public class PositioningAlgorithm {
         return vrp;
     }
 
-    static double[] weightedKNN(RecordPoint tp, List<RecordPoint> rp, int K, int minValidAPNum, int minDbm, StringBuilder estimateReason) {
+    static double[] weightedKNN(RecordPoint tp, List<RecordPoint> rp, int K, int minValidAPNum, int minDbm) {
         // K개의 최근접 RP를 선별하는 과정
         List<RecordPoint> candidateRP = new ArrayList<>();
         for (int i = 0; i < rp.size(); i++) {
@@ -225,14 +203,9 @@ public class PositioningAlgorithm {
         int nth = 0;
         for (Entry<RecordPoint, Double> entry : evaluateDistance.entrySet()) {
             double fraction = (weight.get(entry.getKey()) / totalWeight);
-
             for (int i = 0; i < 2; i++) {
                 estimatedPosition[i] += fraction * entry.getKey().getLocation()[i];
             }
-
-            estimateReason.append(nth++ + " (" + String.format("%.6f", entry.getKey().getLocation()[0]) + ", " + String.format("%.6f", entry.getKey().getLocation()[1]) + ") ");
-            estimateReason.append(String.format("%.6f", fraction));
-            estimateReason.append("\n");
         }
 
         return estimatedPosition;

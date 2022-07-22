@@ -64,6 +64,7 @@ public class ItemInfo {
         this.building = building;
         this.method = method;
         this.date = new Date(System.currentTimeMillis());
+        this._new = _new;
     }
 
     public ItemInfo(Float x, Float y, String SSID, String BSSID, Integer RSSI, Integer frequency, String uuid, String building, String method, Integer _new, long date) {

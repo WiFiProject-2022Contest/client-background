@@ -1,6 +1,7 @@
 package wifilocation.background.database;
 
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import com.google.gson.annotations.SerializedName;
@@ -8,6 +9,7 @@ import com.google.gson.annotations.SerializedName;
 import java.util.Date;
 
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 
 @Entity(tableName = "fingerprint")
@@ -54,31 +56,21 @@ public class EstimatedResult {
     @SerializedName("date")
     private Date date;
 
-    private StringBuilder estimateReason;
+    private Integer _new;
 
-    public EstimatedResult(String building, String ssid, Double pos_x, Double pos_y, Double est_x, Double est_y, String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion) {
-        this.building = building;
-        this.ssid = ssid;
-        this.pos_x = pos_x;
-        this.pos_y = pos_y;
-        this.est_x = est_x;
-        this.est_y = est_y;
-        this.uuid = uuid;
-        this.method = method;
-        this.k = k;
-        this.threshold = threshold;
-        this.algorithmVersion = algorithmVersion;
+    public EstimatedResult() {
+        this.building = null;
+        this.ssid = null;
+        this.pos_x = 0d;
+        this.pos_y = 0d;
+        this.est_x = 0d;
+        this.est_y = 0d;
+        this.uuid = null;
+        this.method = null;
+        this.k = -1;
+        this.threshold = -1;
+        this.algorithmVersion = 0;
         this.date = new Date(System.currentTimeMillis());
-    }
-
-    public EstimatedResult(String building, String ssid, String uuid, String method, int k, int threshold, int algorithmVersion) {
-        this.building = building;
-        this.ssid = ssid;
-        this.uuid = uuid;
-        this.method = method;
-        this.k = k;
-        this.threshold = threshold;
-        this.algorithmVersion = algorithmVersion;
     }
 
     public EstimatedResult(EstimatedResult estimatedResult) {
@@ -94,6 +86,45 @@ public class EstimatedResult {
         this.threshold = estimatedResult.getThreshold();
         this.algorithmVersion = estimatedResult.getAlgorithmVersion();
         this.date = estimatedResult.getDate();
-        this.estimateReason = estimatedResult.getEstimateReason();
+    }
+
+    public EstimatedResult(String building, String ssid, String uuid) {
+        this();
+
+        this.building = building;
+        this.ssid = ssid;
+        this.uuid = uuid;
+    }
+
+    public EstimatedResult(String building, String ssid, String uuid, String method, int k, int threshold, int algorithmVersion) {
+        this(building, ssid, uuid);
+
+        this.method = method;
+        this.k = k;
+        this.threshold = threshold;
+        this.algorithmVersion = algorithmVersion;
+    }
+
+    public EstimatedResult(String building, String ssid, String uuid, String method, int K, int threshold, int algorithmVersion, long date) {
+        this(building, ssid, uuid, method, K, threshold, algorithmVersion);
+
+        this.date = new Date(date);
+    }
+
+    public EstimatedResult(String building, String ssid, double positionRealX, double positionRealY, double positionEstimatedX, double positionEstimatedY,
+                           String uuid, String method, int k, int threshold, int algorithmVersion, long date) {
+        this();
+
+        this.building = building;
+        this.ssid = ssid;
+        this.pos_x = positionRealX;
+        this.pos_y = positionRealY;
+        this.est_x = positionEstimatedX;
+        this.est_y = positionEstimatedY;
+        this.uuid = uuid;
+        this.method = method;
+        this.k = k;
+        this.threshold = threshold;
+        this.algorithmVersion = algorithmVersion;
     }
 }
