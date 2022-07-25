@@ -180,9 +180,6 @@ public class EstimateLoggingService extends Service {
         @Override
         public void run() {
             List<EstimatedResult> estimatedResults = getEstimatedResults();
-            if (estimatedResults.get(0) == null) {
-                Log.v(getClass().getName(), "*****");
-            }
             db.estimatedResultDao().insertAll(estimatedResults);
         }
 
@@ -192,9 +189,15 @@ public class EstimateLoggingService extends Service {
             List<EstimatedResult> results = new ArrayList<EstimatedResult>();
 
             // 2ghz
-            results.add(PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 2, standardRecordDistance));
+            EstimatedResult result2ghz = PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 2, standardRecordDistance);
+            if (result2ghz != null) {
+                results.add(result2ghz);
+            }
             // 5ghz
-            results.add(PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 5, standardRecordDistance));
+            EstimatedResult result5ghz = PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 5, standardRecordDistance);
+            if (result5ghz != null) {
+                results.add(result5ghz);
+            }
 
             return results;
         }
