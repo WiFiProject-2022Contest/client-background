@@ -37,17 +37,4 @@ public interface ItemInfoDao {
     @Query("SELECT * FROM wifiinfo " +
             "WHERE (pos_x BETWEEN :pos_x - 1 AND :pos_x + 1) AND (pos_y BETWEEN :pos_y - 1 AND :pos_y + 1)")
     public List<ItemInfo> loadItemsAt(Float pos_x, Float pos_y);
-
-    /**
-     * 아직 동기화되지 않고 로컬 DB에만 있는 row를 List로 반환
-     */
-    @Query("SELECT * FROM wifiinfo WHERE _new = 1")
-    public List<ItemInfo> loadItemsNew();
-
-    /**
-     * 이미 동기화가 되어 서버와 로컬 DB 모두에 있는 row를 List로 반환
-     */
-    @Query("SELECT * FROM wifiinfo WHERE _new = 0")
-    public List<ItemInfo> loadItemsOld();
-
 }

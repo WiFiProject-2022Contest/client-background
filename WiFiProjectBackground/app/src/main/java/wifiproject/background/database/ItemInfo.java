@@ -51,9 +51,7 @@ public class ItemInfo {
     @SerializedName("date")
     private Date date;
 
-    private Integer _new;
-
-    public ItemInfo(Float pos_x, Float pos_y, String SSID, String BSSID, Integer level, Integer frequency, String uuid, String building, String method, Integer _new) {
+    public ItemInfo(Float pos_x, Float pos_y, String SSID, String BSSID, Integer level, Integer frequency, String uuid, String building, String method) {
         this.pos_x = pos_x;
         this.pos_y = pos_y;
         this.SSID = SSID;
@@ -64,11 +62,10 @@ public class ItemInfo {
         this.building = building;
         this.method = method;
         this.date = new Date(System.currentTimeMillis());
-        this._new = _new;
     }
 
-    public ItemInfo(Float x, Float y, String SSID, String BSSID, Integer RSSI, Integer frequency, String uuid, String building, String method, Integer _new, long date) {
-        this(x, y, SSID, BSSID, RSSI, frequency, uuid, building, method, _new);
+    public ItemInfo(Float x, Float y, String SSID, String BSSID, Integer RSSI, Integer frequency, String uuid, String building, String method, long date) {
+        this(x, y, SSID, BSSID, RSSI, frequency, uuid, building, method);
         this.date = new Date(date);
     }
 }

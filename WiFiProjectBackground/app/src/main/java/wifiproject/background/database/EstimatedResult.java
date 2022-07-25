@@ -56,11 +56,9 @@ public class EstimatedResult {
     @SerializedName("date")
     private Date date;
 
-    private Integer _new;
-    
     // PositioningAlgorithm에서만 사용함
     @Ignore
-    public EstimatedResult(String building, String ssid, String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion, Integer _new) {
+    public EstimatedResult(String building, String ssid, String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion) {
         this.pos_x = 0d;
         this.pos_y = 0d;
         this.est_x = 0d;
@@ -72,13 +70,12 @@ public class EstimatedResult {
         this.k = k;
         this.threshold = threshold;
         this.algorithmVersion = algorithmVersion;
-        this._new = _new;
         this.date = new Date(System.currentTimeMillis());
     }
 
     public EstimatedResult(String building, String ssid,
                            Double pos_x, Double pos_y, Double est_x, Double est_y,
-                           String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion, Integer _new) {
+                           String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion) {
         this.building = building;
         this.ssid = ssid;
         this.pos_x = pos_x;
@@ -91,12 +88,11 @@ public class EstimatedResult {
         this.threshold = threshold;
         this.algorithmVersion = algorithmVersion;
         this.date = new Date(System.currentTimeMillis());
-        this._new = _new;
     }
 
     public EstimatedResult(String building, String ssid,
                            Double pos_x, Double pos_y, Double est_x, Double est_y,
-                           String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion, long date, Integer _new) {
+                           String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion, long date) {
         this.building = building;
         this.ssid = ssid;
         this.pos_x = pos_x;
@@ -109,6 +105,5 @@ public class EstimatedResult {
         this.threshold = threshold;
         this.algorithmVersion = algorithmVersion;
         this.date = new Date(date);
-        this._new = _new;
     }
 }
