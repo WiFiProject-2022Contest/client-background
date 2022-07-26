@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        uuid = getDevicesUUID(this);
     }
 
     private void getPermission() {
