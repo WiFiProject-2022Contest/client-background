@@ -3,6 +3,7 @@ package wifilocation.background;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
 
 import android.Manifest;
 import android.content.Context;
@@ -16,6 +17,7 @@ import android.widget.Toast;
 
 import java.util.UUID;
 
+import wifilocation.background.database.EstimatedResultViewModel;
 import wifilocation.background.service.EstimateLoggingService;
 
 public class MainActivity extends AppCompatActivity {

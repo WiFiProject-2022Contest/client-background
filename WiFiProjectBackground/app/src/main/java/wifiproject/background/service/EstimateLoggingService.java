@@ -19,12 +19,14 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.room.Room;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -32,7 +34,11 @@ import wifilocation.background.MainActivity;
 import wifilocation.background.R;
 import wifilocation.background.database.AppDatabase;
 import wifilocation.background.database.EstimatedResult;
+import wifilocation.background.database.EstimatedResultRepository;
+import wifilocation.background.database.EstimatedResultViewModel;
 import wifilocation.background.database.ItemInfo;
+import wifilocation.background.database.ItemInfoRepository;
+import wifilocation.background.database.ItemInfoViewModel;
 import wifilocation.background.estimate.PositioningAlgorithm;
 
 public class EstimateLoggingService extends Service {
@@ -52,6 +58,10 @@ public class EstimateLoggingService extends Service {
     SharedPreferences sp;
     SharedPreferences.Editor edit;
 
+    ItemInfoRepository itemInfoRepository;
+    EstimatedResultRepository estimatedResultRepository;
+    Date today;
+
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -68,8 +78,6 @@ public class EstimateLoggingService extends Service {
         }
     };
 
-    AppDatabase db;
-
     public EstimateLoggingService() {
     }
 
@@ -84,18 +92,25 @@ public class EstimateLoggingService extends Service {
         filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         context.registerReceiver(wifi_receiver, filter);
 
-        db = AppDatabase.getInstance(context);
+        itemInfoRepository = new ItemInfoRepository(getApplication());
+        estimatedResultRepository = new EstimatedResultRepository(getApplication());
 
         sp = getSharedPreferences("sp", MODE_PRIVATE);
         edit = sp.edit();
 
-        Date date = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(new Date());
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        today = calendar.getTime();
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
-        String today = dateFormat.format(date);
+        String todayStr = dateFormat.format(today);
         String last_saved = sp.getString("last_date", "");
-        if (!last_saved.equals(today)) {
-            db.estimatedResultDao().deleteAll();
-            edit.putString("last_date", today);
+        if (!last_saved.equals(todayStr)) {
+            estimatedResultRepository.deleteAll();
+            edit.putString("last_date", todayStr);
             edit.commit();
             Toast.makeText(context, "데이터 초기화 및 날짜 변경 완료", Toast.LENGTH_SHORT).show();
         }
@@ -189,9 +204,8 @@ public class EstimateLoggingService extends Service {
         }
         Toast.makeText(context, "WiFi Scan Success!.", Toast.LENGTH_SHORT).show();
 
-        EstimateLoggingRunnable estimateLoggingRunnable = new EstimateLoggingRunnable();
-        Thread t = new Thread(estimateLoggingRunnable);
-        t.start();
+        List<EstimatedResult> estimatedResults = getEstimatedResults();
+        estimatedResultRepository.insertAll(estimatedResults);
     }
 
     private void scanFailure() {
@@ -199,34 +213,24 @@ public class EstimateLoggingService extends Service {
         wm.getScanResults();
     }
 
-
-    private class EstimateLoggingRunnable implements Runnable {
-        @Override
-        public void run() {
-            List<EstimatedResult> estimatedResults = getEstimatedResults();
-            db.estimatedResultDao().insertAll(estimatedResults);
+    private List<EstimatedResult> getEstimatedResults() {
+        if (savedItemInfos.size() == 0) {
+            savedItemInfos = itemInfoRepository.loadAllItems().getValue();
         }
 
-        private List<EstimatedResult> getEstimatedResults() {
-            LiveData<ItemInfo> l;
-            if (savedItemInfos.size() == 0) {
-                savedItemInfos = db.itemInfoDao().loadAllItems();
-            }
+        List<EstimatedResult> results = new ArrayList<EstimatedResult>();
 
-            List<EstimatedResult> results = new ArrayList<EstimatedResult>();
-
-            // 2ghz
-            EstimatedResult result2ghz = PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 2, standardRecordDistance);
-            if (result2ghz != null) {
-                results.add(result2ghz);
-            }
-            // 5ghz
-            EstimatedResult result5ghz = PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 5, standardRecordDistance);
-            if (result5ghz != null) {
-                results.add(result5ghz);
-            }
-
-            return results;
+        // 2ghz
+        EstimatedResult result2ghz = PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 2, standardRecordDistance);
+        if (result2ghz != null) {
+            results.add(result2ghz);
         }
+        // 5ghz
+        EstimatedResult result5ghz = PositioningAlgorithm.run(items, savedItemInfos, MainActivity.building, MainActivity.ssid, MainActivity.uuid, "WiFi", 5, standardRecordDistance);
+        if (result5ghz != null) {
+            results.add(result5ghz);
+        }
+
+        return results;
     }
 }

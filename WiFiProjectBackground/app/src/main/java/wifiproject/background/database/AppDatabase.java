@@ -8,19 +8,26 @@ import androidx.room.RoomDatabase;
 import androidx.room.TypeConverter;
 import androidx.room.TypeConverters;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
- * - 데이터베이스 인스턴스 획득
- * AppDatabase db = AppDatabase.getInstance(context);
+ * 데이터베이스 클래스
+ * 사용 가능한 메서드들은 각 DAO 참고
  *
- * - 획득 후 사용법
- * ItemInfoDao itemInfoDao = db.itemInfoDao();
- * List<ItemInfo> items = itemInfoDao.loadAllItems();
+ * - 사용 예시 (fingerprint 테이블 접근)
+ * EstimatedResultRepository r = new EstimatedResultRepository(application);
+ * r.insertAll(items);
+ *
+ * List<EstimatedResult> items = r.loadAllItems().getValue();
  */
 @Database(entities = {ItemInfo.class, EstimatedResult.class}, version = 1)
 @TypeConverters({Converters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
-    private static AppDatabase instance = null;
+    private static volatile AppDatabase instance = null;
+    private static final int NUMBER_OF_THREADS = 4;
+    static final ExecutorService databaseWriteExecutor = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
     public abstract ItemInfoDao itemInfoDao();
 
