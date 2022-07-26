@@ -9,6 +9,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
@@ -22,6 +26,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.room.Room;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
@@ -40,6 +45,12 @@ import wifilocation.background.database.ItemInfo;
 import wifilocation.background.database.ItemInfoRepository;
 import wifilocation.background.database.ItemInfoViewModel;
 import wifilocation.background.estimate.PositioningAlgorithm;
+import wifilocation.background.serverconnection.PushResultModel;
+import wifilocation.background.serverconnection.RetrofitAPI;
+import wifilocation.background.serverconnection.RetrofitClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class EstimateLoggingService extends Service {
 
@@ -61,6 +72,7 @@ public class EstimateLoggingService extends Service {
     ItemInfoRepository itemInfoRepository;
     EstimatedResultRepository estimatedResultRepository;
     Date today;
+    Long count = 0L;
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -108,12 +120,23 @@ public class EstimateLoggingService extends Service {
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
         String todayStr = dateFormat.format(today);
         String last_saved = sp.getString("last_date", "");
+        count = sp.getLong("count", 0L);
         if (!last_saved.equals(todayStr)) {
             estimatedResultRepository.deleteAll();
             edit.putString("last_date", todayStr);
+            count = 0L;
+            edit.putLong("count", count);
             edit.commit();
             Toast.makeText(context, "데이터 초기화 및 날짜 변경 완료", Toast.LENGTH_SHORT).show();
         }
+
+        // for test
+        List<EstimatedResult> items = new ArrayList<>();
+        items.add(new EstimatedResult("", "", 1d, 2d, 50d, 60d, MainActivity.uuid, "1", 2, 3, 4, today.getTime()));
+        items.add(new EstimatedResult("", "", 2d, 4d, 50d, 60d, MainActivity.uuid, "1", 2, 3, 4, today.getTime() + 5));
+        estimatedResultRepository.insertAll(items);
+
+        // end
     }
 
     @Override
@@ -206,6 +229,10 @@ public class EstimateLoggingService extends Service {
 
         List<EstimatedResult> estimatedResults = getEstimatedResults();
         estimatedResultRepository.insertAll(estimatedResults);
+        if (isNetworkAvailable()) {
+            List<EstimatedResult> estimatedResultsNotUploaded = estimatedResultRepository.loadItemsAfter(count, today).getValue();
+            pushRemote(estimatedResultsNotUploaded);
+        }
     }
 
     private void scanFailure() {
@@ -232,5 +259,29 @@ public class EstimateLoggingService extends Service {
         }
 
         return results;
+    }
+
+    private boolean isNetworkAvailable() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            ConnectivityManager connectivityManager = context.getSystemService(ConnectivityManager.class);
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            return activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting();
+        }
+        return false;
+    }
+
+    private void pushRemote(List<EstimatedResult> estimatedResults) {
+        RetrofitAPI retrofitAPI = RetrofitClient.getRetrofitAPI();
+        try {
+            Response<PushResultModel> response = retrofitAPI.postDataEstimatedResult(estimatedResults).execute();
+            if (response.isSuccessful()) {
+                PushResultModel result = response.body();
+                count = result.getCount();
+                edit.putLong("count", count);
+                edit.commit();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

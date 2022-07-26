@@ -35,7 +35,7 @@ public class EstimatedResultViewModel extends AndroidViewModel {
         return estimatedResultRepository.loadItemsDuring(from, to);
     }
 
-    public LiveData<List<EstimatedResult>> loadItemsAfter(Long id, Long today) {
-        return estimatedResultRepository.loadItemsAfter(id, today);
+    public LiveData<List<EstimatedResult>> loadItemsAfter(Long count, Date today) {
+        return estimatedResultRepository.loadItemsAfter(count, today);
     }
 }

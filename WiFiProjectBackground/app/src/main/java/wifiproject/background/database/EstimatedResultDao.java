@@ -46,5 +46,5 @@ public interface EstimatedResultDao {
      * 오늘 측정된 데이터 중 서버에 아직 올라가지 않은 row를 반환
      */
     @Query("SELECT * FROM fingerprint WHERE date >= :today LIMIT -1 OFFSET :count")
-    public LiveData<List<EstimatedResult>> loadItemsAfter(Long count, Long today);
+    public LiveData<List<EstimatedResult>> loadItemsAfter(Long count, Date today);
 }

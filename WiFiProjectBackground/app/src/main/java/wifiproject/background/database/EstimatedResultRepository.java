@@ -44,7 +44,7 @@ public class EstimatedResultRepository {
         return estimatedResultDao.loadItemsDuring(from, to);
     }
 
-    public LiveData<List<EstimatedResult>> loadItemsAfter(Long id, Long today) {
-        return estimatedResultDao.loadItemsAfter(id, today);
+    public LiveData<List<EstimatedResult>> loadItemsAfter(Long count, Date today) {
+        return estimatedResultDao.loadItemsAfter(count, today);
     }
 }

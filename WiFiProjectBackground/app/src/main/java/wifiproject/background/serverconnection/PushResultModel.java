@@ -9,5 +9,5 @@ import lombok.Setter;
 @Setter
 public class PushResultModel {
     @SerializedName("count")
-    Integer count;
+    Long count;
 }
