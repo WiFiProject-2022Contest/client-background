@@ -1,6 +1,7 @@
 package wifilocation.background.database;
 
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
 
@@ -18,6 +19,14 @@ public interface EstimatedResultDao {
      */
     @Insert
     public void insertAll(List<EstimatedResult> items);
+
+    /**
+     * 모든 row를 삭제
+     * 일자가 바뀔 때 사용
+     */
+    @Query("DELETE FROM fingerprint")
+    public void deleteAll();
+
 
     /**
      * 모든 row를 List로 반환
