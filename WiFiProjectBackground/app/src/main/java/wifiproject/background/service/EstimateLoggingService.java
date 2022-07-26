@@ -18,6 +18,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.lifecycle.LiveData;
 import androidx.room.Room;
 
 import java.text.DateFormat;
@@ -46,6 +47,7 @@ public class EstimateLoggingService extends Service {
     List<ItemInfo> savedItemInfos = new ArrayList<>();
 
     final static double standardRecordDistance = 8;
+
 
     SharedPreferences sp;
     SharedPreferences.Editor edit;
@@ -90,7 +92,7 @@ public class EstimateLoggingService extends Service {
         Date date = new Date();
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
         String today = dateFormat.format(date);
-        String last_saved = sp.getString("last_date", today);
+        String last_saved = sp.getString("last_date", "");
         if (!last_saved.equals(today)) {
             db.estimatedResultDao().deleteAll();
             edit.putString("last_date", today);
@@ -206,7 +208,10 @@ public class EstimateLoggingService extends Service {
         }
 
         private List<EstimatedResult> getEstimatedResults() {
-            savedItemInfos = db.itemInfoDao().loadAllItems();
+            LiveData<ItemInfo> l;
+            if (savedItemInfos.size() == 0) {
+                savedItemInfos = db.itemInfoDao().loadAllItems();
+            }
 
             List<EstimatedResult> results = new ArrayList<EstimatedResult>();
 
