@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
@@ -19,7 +20,11 @@ import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 import androidx.room.Room;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import wifilocation.background.MainActivity;
@@ -41,6 +46,9 @@ public class EstimateLoggingService extends Service {
     List<ItemInfo> savedItemInfos = new ArrayList<>();
 
     final static double standardRecordDistance = 8;
+
+    SharedPreferences sp;
+    SharedPreferences.Editor edit;
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -75,6 +83,20 @@ public class EstimateLoggingService extends Service {
         context.registerReceiver(wifi_receiver, filter);
 
         db = AppDatabase.getInstance(context);
+
+        sp = getSharedPreferences("sp", MODE_PRIVATE);
+        edit = sp.edit();
+
+        Date date = new Date();
+        DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+        String today = dateFormat.format(date);
+        String last_saved = sp.getString("last_date", today);
+        if (!last_saved.equals(today)) {
+            db.estimatedResultDao().deleteAll();
+            edit.putString("last_date", today);
+            edit.commit();
+            Toast.makeText(context, "데이터 초기화 및 날짜 변경 완료", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
