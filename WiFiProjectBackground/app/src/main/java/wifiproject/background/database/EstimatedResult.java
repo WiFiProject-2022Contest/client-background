@@ -58,7 +58,7 @@ public class EstimatedResult {
 
     // PositioningAlgorithm에서만 사용함
     @Ignore
-    public EstimatedResult(String building, String ssid, String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion) {
+    public EstimatedResult(String building, String ssid, float aFloat, float cursorFloat, float v, float aFloat1, String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion, long aLong) {
         this.pos_x = 0d;
         this.pos_y = 0d;
         this.est_x = 0d;
@@ -74,7 +74,6 @@ public class EstimatedResult {
     }
 
     public EstimatedResult(String building, String ssid,
-                           Double pos_x, Double pos_y, Double est_x, Double est_y,
                            String uuid, String method, Integer k, Integer threshold, Integer algorithmVersion) {
         this.building = building;
         this.ssid = ssid;
