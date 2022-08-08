@@ -46,7 +46,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String UUID = "uuid";
     public static final String BUILDING = "building";
     public static final String METHOD = "method";
-    public static final String NEW = "new";
 
     public static final String TABLE_FINGERPRINT = "fingerprint";
     // POS_X
@@ -61,7 +60,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // SSID
     public static final String ALGORITHM_VERSION = "algorithmVersion";
     // METHOD
-    // NEW
 
     public DatabaseHelper(@Nullable Context context) {
         super(context, DBNAME, null, VERSION);
@@ -82,8 +80,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 DATE + " integer, " +
                 UUID + " text, " +
                 BUILDING + " text, " +
-                METHOD + " text, " +
-                NEW + " integer default 0)");
+                METHOD + " text)");
 
         // fingerprint 테이블 생성
         sqLiteDatabase.execSQL("create table if not exists " + TABLE_FINGERPRINT + " (" +
@@ -99,8 +96,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 BUILDING + " text, " +
                 SSID + " text, " +
                 ALGORITHM_VERSION + " integer, " +
-                METHOD + " text, " +
-                NEW + " integer default 0)");
+                METHOD + " text)");
     }
 
     @Override
@@ -128,7 +124,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             return;
         }
         SQLiteDatabase db = getWritableDatabase();
-        StringBuilder sql = new StringBuilder("insert into " + TABLE_WIFIINFO + String.format(" (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ", POS_X, POS_Y, SSID, BSSID, FREQUENCY, LEVEL, DATE, UUID, BUILDING, METHOD, NEW) + " values ");
+        StringBuilder sql = new StringBuilder("insert into " + TABLE_WIFIINFO + String.format(" (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ", POS_X, POS_Y, SSID, BSSID, FREQUENCY, LEVEL, DATE, UUID, BUILDING, METHOD) + " values ");
         int sqlLength = sql.length();
         for (int i = 1; i <= items.size(); i++) {
             ItemInfo item = items.get(i - 1);
@@ -159,11 +155,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      * @param y        y - 1 < pos_y < y + 1 인 row들만 조회, x와 y 모두 null 전달 시 위치에 제한 없음
      * @param from     from 잉후에 등록된 row들만 조회, null 전달 시 제한 없음
      * @param to       to 이전에 등록된 row들만 조회, null 전달 시 제한 없음
-     * @param _new     서버에는 없고 로컬 DB에만 있는 데이터를 조회하려면 null이 아닌 값 전달
      * @return sql문 실행 결과로 나온 row들을 List<WiFiItem> 으로 변환하여 반환
      */
     @SuppressLint("Range")
-    public List<ItemInfo> searchFromWiFiInfo(String building, String ssid, Float x, Float y, String from, String to, Integer _new) {
+    public List<ItemInfo> searchFromWiFiInfo(String building, String ssid, Float x, Float y, String from, String to) {
         StringBuilder sql = new StringBuilder("select " + String.format("%s, %s, %s, %s, %s, %s, %s, %s, %s, %s", POS_X, POS_Y, SSID, BSSID, LEVEL, FREQUENCY, UUID, BUILDING, METHOD, DATE) + " from " + TABLE_WIFIINFO);
         List<String> conditions = new ArrayList<String>();
         // 빌딩 조건 추가
@@ -189,10 +184,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // 위치 조건 추가
         if (x != null && y != null) {
             conditions.add(String.format(" ((%s between %f and %f) and (%s between %f and %f)) ", POS_X, x - 1, x + 1, POS_Y, y - 1, y + 1));
-        }
-        // 로컬에만 있는 데이터 검색할건지 조건 추가
-        if (_new != null) {
-            conditions.add(String.format(" (%s = 1) ", NEW));
         }
         if (conditions.size() != 0) {
             sql.append(" where ");
@@ -257,13 +248,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             return;
         }
         SQLiteDatabase db = getWritableDatabase();
-        StringBuilder sql = new StringBuilder("insert into " + TABLE_FINGERPRINT + String.format(" (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", POS_X, POS_Y, UUID, DATE, EST_X, EST_Y, K, THRESHOLD, BUILDING, SSID, ALGORITHM_VERSION, METHOD, NEW) + " values ");
+        StringBuilder sql = new StringBuilder("insert into " + TABLE_FINGERPRINT + String.format(" (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", POS_X, POS_Y, UUID, DATE, EST_X, EST_Y, K, THRESHOLD, BUILDING, SSID, ALGORITHM_VERSION, METHOD) + " values ");
         int sqlLength = sql.length();
         for (int i = 1; i <= items.size(); i++) {
             EstimatedResult item = items.get(i - 1);
-            sql.append(String.format(" (%f, %f, '%s', %d, %f, %f, %d, %d, '%s', '%s', %d, '%s', %d), ",
+            sql.append(String.format(" (%f, %f, '%s', %d, %f, %f, %d, %d, '%s', '%s', %d, '%s'), ",
                     item.getPos_x(), item.getPos_y(), item.getUuid(), item.getDate().getTime(), item.getEst_x(), item.getEst_y(),
-                    item.getK(), item.getThreshold(), item.getBuilding(), item.getSsid().replace("'", "''"), item.getAlgorithmVersion(), item.getMethod(), _new));
+                    item.getK(), item.getThreshold(), item.getBuilding(), item.getSsid().replace("'", "''"), item.getAlgorithmVersion(), item.getMethod()));
 
             if (i % 500 == 0) {
                 try {
@@ -283,18 +274,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     /**
      * fingerprint 테이블에서 데이터 조회
      *
-     * @param _new 서버에는 없고 로컬 DB에만 있는 데이터를 조회하려면 null이 아닌 값 전달
      * @return sql문 실행 결과로 나온 row들을 List<EstimateResult> 로 바꿔서 반환
      */
     @SuppressLint("Range")
-    public List<EstimatedResult> searchFromFingerprint(Integer _new) {
+    public List<EstimatedResult> searchFromFingerprint() {
         StringBuilder sql = new StringBuilder("select " + String.format(" %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ", POS_X, POS_Y, UUID, DATE, EST_X, EST_Y, K, THRESHOLD, BUILDING, SSID, ALGORITHM_VERSION, METHOD) +
                 " from " + TABLE_FINGERPRINT);
         List<String> conditions = new ArrayList<String>();
-        // 로컬에만 있는 데이터만 조회할지에 대한 조건 추가
-        if (_new != null) {
-            conditions.add(String.format(" (%s = 1) ", NEW));
-        }
         if (conditions.size() != 0) {
             sql.append(" where ");
         }
@@ -388,8 +374,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
         private void pushRemoteNewData() {
-            List<ItemInfo> wiFiItems = searchFromWiFiInfo(null, null, null, null, null, null, 1);
-            List<EstimatedResult> estimatedResults = searchFromFingerprint(1);
+            List<ItemInfo> wiFiItems = searchFromWiFiInfo(null, null, null, null, null, null);
+            List<EstimatedResult> estimatedResults = searchFromFingerprint();
             RetrofitAPI retrofitAPI = RetrofitClient.getRetrofitAPI();
             try {
                 retrofitAPI.postDataWiFiItem(wiFiItems).execute();

@@ -179,6 +179,7 @@ public class EstimateLoggingService extends Service {
         }
         Toast.makeText(context, "WiFi Scan Success!", Toast.LENGTH_SHORT).show();
 
+
         EstimateLoggingRunnable estimateLoggingRunnable = new EstimateLoggingRunnable();
         Thread t = new Thread(estimateLoggingRunnable);
         t.start();
@@ -198,7 +199,7 @@ public class EstimateLoggingService extends Service {
         }
 
         private List<EstimatedResult> getEstimatedResults() {
-            savedItemInfos = dbHelper.searchFromWiFiInfo(null, null, null, null, null, null, null);
+            savedItemInfos = dbHelper.searchFromWiFiInfo(null, null, null, null, null, null);
             List<EstimatedResult> results = new ArrayList<EstimatedResult>();
 
             // 2ghz
