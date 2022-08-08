@@ -9,6 +9,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
@@ -18,6 +20,7 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,6 +33,10 @@ import wifilocation.background.database.DatabaseHelper;
 import wifilocation.background.database.EstimatedResult;
 import wifilocation.background.database.ItemInfo;
 import wifilocation.background.estimate.PositioningAlgorithm;
+import wifilocation.background.serverconnection.PushResultModel;
+import wifilocation.background.serverconnection.RetrofitAPI;
+import wifilocation.background.serverconnection.RetrofitClient;
+import retrofit2.Response;
 
 public class EstimateLoggingService extends Service {
 
@@ -47,6 +54,7 @@ public class EstimateLoggingService extends Service {
 
     SharedPreferences sp;
     SharedPreferences.Editor edit;
+    Long count;
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -195,6 +203,11 @@ public class EstimateLoggingService extends Service {
         public void run() {
             List<EstimatedResult> estimatedResults = getEstimatedResults();
             dbHelper.insertIntoFingerprint(estimatedResults, 1);
+            if (isNetworkAvailable()) {
+                // TODO: count 이후로만 로컬에서 로드
+                List<EstimatedResult> afterCount = new ArrayList<>();
+                pushRemote(afterCount);
+            }
         }
 
         private List<EstimatedResult> getEstimatedResults() {
@@ -213,6 +226,30 @@ public class EstimateLoggingService extends Service {
             }
 
             return results;
+        }
+
+        private boolean isNetworkAvailable() {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                ConnectivityManager connectivityManager = context.getSystemService(ConnectivityManager.class);
+                NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+                return activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting();
+            }
+            return false;
+        }
+
+        private void pushRemote(List<EstimatedResult> estimatedResults) {
+            RetrofitAPI retrofitAPI = RetrofitClient.getRetrofitAPI();
+            try {
+                Response<PushResultModel> response = retrofitAPI.postDataEstimatedResult(estimatedResults).execute();
+                if (response.isSuccessful()) {
+                    PushResultModel result = response.body();
+                    count = result.getCount();
+                    edit.putLong("count", count);
+                    edit.commit();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
