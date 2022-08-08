@@ -203,7 +203,7 @@ public class EstimateLoggingService extends Service {
         @Override
         public void run() {
             List<EstimatedResult> estimatedResults = getEstimatedResults();
-            dbHelper.insertIntoFingerprint(estimatedResults, 1);
+            dbHelper.insertIntoFingerprint(estimatedResults);
             if (isNetworkAvailable()) {
                 // TODO: count 이후로만 로컬에서 로드
                 List<EstimatedResult> afterCount = new ArrayList<>();

@@ -117,9 +117,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      * wifiinfo 테이블에 데이터 추가
      *
      * @param items 스캔한 WiFiItem 전달, DB에 저장
-     * @param _new  새로운 데이터라면 1, 아니라면 0 전달
      */
-    public void insertIntoWiFiInfo(List<ItemInfo> items, int _new) {
+    public void insertIntoWiFiInfo(List<ItemInfo> items) {
         if (items.size() == 0) {
             return;
         }
@@ -128,8 +127,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         int sqlLength = sql.length();
         for (int i = 1; i <= items.size(); i++) {
             ItemInfo item = items.get(i - 1);
-            sql.append(String.format(" (%f, %f, '%s', '%s', %d, %d, %d, '%s', '%s', '%s', %d), ",
-                    item.getPos_x(), item.getPos_y(), item.getSSID().replace("'", "''"), item.getBSSID(), item.getFrequency(), item.getLevel(), item.getDate().getTime(), item.getUuid(), item.getBuilding(), item.getMethod(), _new));
+            sql.append(String.format(" (%f, %f, '%s', '%s', %d, %d, %d, '%s', '%s', '%s'), ",
+                    item.getPos_x(), item.getPos_y(), item.getSSID().replace("'", "''"), item.getBSSID(), item.getFrequency(), item.getLevel(), item.getDate().getTime(), item.getUuid(), item.getBuilding(), item.getMethod()));
 
             if (i % 500 == 0) {
                 try {
@@ -241,9 +240,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
      * fingerprint 테이블에 데이터 추가
      *
      * @param items 추정된 위치 정보 리스트 전달
-     * @param _new  새로운 데이터라면 1, 아니라면 0 전달
      */
-    public void insertIntoFingerprint(List<EstimatedResult> items, int _new) {
+    public void insertIntoFingerprint(List<EstimatedResult> items) {
         if (items.size() == 0) {
             return;
         }
@@ -396,8 +394,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             try {
                 List<ItemInfo> wiFiItems = retrofitAPI.getDataWiFiItem(null, null, null, null, null, null).execute().body();
                 List<EstimatedResult> estimatedResults = retrofitAPI.getDataEstimateResult(null, null).execute().body();
-                insertIntoWiFiInfo(wiFiItems, 0);
-                insertIntoFingerprint(estimatedResults, 0);
+                insertIntoWiFiInfo(wiFiItems);
+                insertIntoFingerprint(estimatedResults);
             } catch (IOException e) {
                 e.printStackTrace();
             }
