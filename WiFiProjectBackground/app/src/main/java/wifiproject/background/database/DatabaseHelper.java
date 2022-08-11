@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import wifilocation.background.MainActivity;
+import wifilocation.background.barcode.Barcode;
 import wifilocation.background.database.EstimatedResult;
 import wifilocation.background.database.ItemInfo;
 import wifilocation.background.serverconnection.RetrofitAPI;
@@ -62,6 +64,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String ALGORITHM_VERSION = "algorithmVersion";
     // METHOD
 
+    public static final String TABLE_BARCODE = "barcode";
+    public static final String BARCODE_SERIAL = "barcode_serial";
+    // BUILDING
+    // POS_X
+    // POS_Y
+    // DATE
+
     public DatabaseHelper(@Nullable Context context) {
         super(context, DBNAME, null, VERSION);
         this.context = context;
@@ -98,6 +107,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 SSID + " text, " +
                 ALGORITHM_VERSION + " integer, " +
                 METHOD + " text)");
+        
+        // barcode 테이블 생성
+        sqLiteDatabase.execSQL("create table if not exists " + TABLE_BARCODE + " (" +
+                "id integer primary key autoincrement, " +
+                BARCODE_SERIAL + " text, " +
+                BUILDING + " text, " +
+                POS_X + " real, " +
+                POS_Y + " real, " +
+                DATE + " date)");
     }
 
     @Override
@@ -110,6 +128,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (newVersion > 1) {
             sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_WIFIINFO);
             sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_FINGERPRINT);
+            sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_BARCODE);
             onCreate(sqLiteDatabase);
         }
     }
@@ -368,84 +387,63 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("delete from " + TABLE_FINGERPRINT);
     }
 
-
     /**
-     * 서버와 DB 동기화
+     * barcode 테이블에 데이터 추가
+     * @param items
      */
-    public void synchronize() {
-        SynchronizeTask synchronizeTask = new SynchronizeTask();
-        synchronizeTask.execute();
+    public void insertIntoBarcode(List<Barcode> items) {
+        if (items.size() == 0) {
+            return;
+        }
+        SQLiteDatabase db = getWritableDatabase();
+        StringBuilder sql = new StringBuilder("insert into " + TABLE_BARCODE + String.format(" (%s, %s, %s, %s, %s)", BARCODE_SERIAL, BUILDING, POS_X, POS_Y, DATE) + " values ");
+        int sqlLength = sql.length();
+        for (int i = 1; i <= items.size(); i++) {
+            Barcode item = items.get(i - 1);
+            sql.append(String.format(" ('%s', '%s', %f, %f, %d), ", item.getSerial(), MainActivity.building, item.getPosX(), item.getPosY(), item.getDate().getTime()));
+            if (i % 500 == 0) {
+                try {
+                    db.execSQL(sql.substring(0, sql.length() - 2));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    sql.setLength(sqlLength);
+                }
+            }
+        }
+        if (items.size() % 500 != 0) {
+            db.execSQL(sql.substring(0, sql.length() - 2));
+        }
     }
 
-    private class SynchronizeTask extends AsyncTask<String, String, String> {
+    /**
+     * barcode 테이블에서 데이터 조회
+     * @return 실행 결과로 나온 row들을 List<Barcode>로 반환
+     */
+    @SuppressLint("Range")
+    public List<Barcode> searchFromBarcode() {
+        StringBuilder sql = new StringBuilder("select " + String.format(" %s, %s, %s, %s ", BARCODE_SERIAL, POS_X, POS_Y, DATE) + " from " + TABLE_BARCODE + " where " + String.format(" (%s = '%s') ", BUILDING, MainActivity.building));
 
-        ProgressDialog progressDialog = new ProgressDialog(context);
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(sql.toString(), null);
 
-        @Override
-        protected void onPreExecute() {
-            progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-            progressDialog.setCancelable(false);
-            progressDialog.show();
-            super.onPreExecute();
+        List<Barcode> result = new ArrayList<>();
+        int count = cursor.getCount();
+        for (int i = 0; i < count; i++) {
+            cursor.moveToNext();
+            result.add(new Barcode(cursor.getString(cursor.getColumnIndex(BARCODE_SERIAL)),
+                    cursor.getFloat(cursor.getColumnIndex(POS_X)),
+                    cursor.getFloat(cursor.getColumnIndex(POS_Y)),
+                    cursor.getLong(cursor.getColumnIndex(DATE))));
         }
+        return result;
+    }
 
-        @Override
-        protected String doInBackground(String... strings) {
-            // 서버에 new가 1인 데이터 올리기
-            publishProgress("서버에 신규 데이터 업로드 중...");
-            pushRemoteNewData();
-            // 로컬에 있는 데이터 삭제
-            publishProgress("로컬 DB의 데이터 삭제 중...");
-            deleteAllLocal();
-            // 서버로부터 데이터 받아오기
-            publishProgress("서버로부터 데이터를 받아오는 중...");
-            getAllFromRemote();
-            return "동기화 완료";
-        }
-
-        @Override
-        protected void onProgressUpdate(String... progress) {
-            if (progress.length > 0) {
-                progressDialog.setMessage(progress[0]);
-            }
-            super.onProgressUpdate(progress);
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            progressDialog.dismiss();
-            Toast.makeText(context, result, Toast.LENGTH_SHORT).show();
-            super.onPostExecute(result);
-        }
-
-        private void pushRemoteNewData() {
-            List<ItemInfo> wiFiItems = searchFromWiFiInfo(null, null, null, null, null, null);
-            List<EstimatedResult> estimatedResults = searchFromFingerprint();
-            RetrofitAPI retrofitAPI = RetrofitClient.getRetrofitAPI();
-            try {
-                retrofitAPI.postDataWiFiItem(wiFiItems).execute();
-                retrofitAPI.postDataEstimatedResult(estimatedResults).execute();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        private void deleteAllLocal() {
-            SQLiteDatabase db = getWritableDatabase();
-            db.execSQL("delete from " + TABLE_WIFIINFO);
-            db.execSQL("delete from " + TABLE_FINGERPRINT);
-        }
-
-        private void getAllFromRemote() {
-            RetrofitAPI retrofitAPI = RetrofitClient.getRetrofitAPI();
-            try {
-                List<ItemInfo> wiFiItems = retrofitAPI.getDataWiFiItem(null, null, null, null, null, null).execute().body();
-                List<EstimatedResult> estimatedResults = retrofitAPI.getDataEstimateResult(null, null).execute().body();
-                insertIntoWiFiInfo(wiFiItems);
-                insertIntoFingerprint(estimatedResults);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    /**
+     * barcode 테이블에서 데이터 삭제
+     */
+    public void deleteBarcode() {
+        SQLiteDatabase db = getWritableDatabase();
+        db.execSQL("delete from " + TABLE_BARCODE);
     }
 }

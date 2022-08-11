@@ -8,6 +8,7 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -17,9 +18,13 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import wifilocation.background.barcode.Barcode;
 import wifilocation.background.database.DatabaseHelper;
 import wifilocation.background.database.ItemInfo;
 import wifilocation.background.serverconnection.RetrofitAPI;
@@ -70,8 +75,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
         uuid = getDevicesUUID(this);
-        LoadRemoteTask loadRemoteTask = new LoadRemoteTask(this);
-        loadRemoteTask.execute();
+
+        SharedPreferences sp = getSharedPreferences("sp", MODE_PRIVATE);
+        Date date = new Date();
+        DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
+        String today = dateFormat.format(date);
+        String last_saved = sp.getString("last_date", today);
+        if (!last_saved.equals(today)) {
+            LoadRemoteTask loadRemoteTask = new LoadRemoteTask(this);
+            loadRemoteTask.execute();
+        }
     }
 
     private void getPermission() {
@@ -127,7 +140,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(String... strings) {
+            publishProgress("기존 데이터 삭제하는 중...");
             dbHelper.deleteWiFiInfo();
+            dbHelper.deleteBarcode();
             publishProgress("데이터 받아오는 중...");
             loadRemote();
             return "데이터 받아오기 완료";
@@ -152,8 +167,10 @@ public class MainActivity extends AppCompatActivity {
             System.out.println("EstimateLoggingService.loadRemote");
             RetrofitAPI retrofitAPI = RetrofitClient.getRetrofitAPI();
             try {
-                List<ItemInfo> result = retrofitAPI.getDataWiFiItem(null, null, null, null, null, null).execute().body();
-                dbHelper.insertIntoWiFiInfo(result);
+                List<ItemInfo> itemInfoResult = retrofitAPI.getDataWiFiItem(null, null, null, null, null, null).execute().body();
+                dbHelper.insertIntoWiFiInfo(itemInfoResult);
+                List<Barcode> barcodeResult = retrofitAPI.getDataBarcode().execute().body();
+                dbHelper.insertIntoBarcode(barcodeResult);
             } catch (IOException e) {
                 e.printStackTrace();
             }

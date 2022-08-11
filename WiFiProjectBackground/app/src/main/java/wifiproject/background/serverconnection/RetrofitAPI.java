@@ -2,6 +2,7 @@ package wifilocation.background.serverconnection;
 
 import java.util.List;
 
+import wifilocation.background.barcode.Barcode;
 import wifilocation.background.database.EstimatedResult;
 import wifilocation.background.database.ItemInfo;
 import retrofit2.Call;
@@ -22,4 +23,10 @@ public interface RetrofitAPI {
 
     @POST("/fingerprint")
     Call<PushResultModel> postDataEstimatedResult(@Body List<EstimatedResult> data);
+
+    @GET("/barcode")
+    Call<List<Barcode>> getDataBarcode();
+
+    @POST("/barcode")
+    Call<PushResultModel> postDataBarcode(@Body List<Barcode> data);
 }
