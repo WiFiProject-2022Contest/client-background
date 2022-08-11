@@ -5,16 +5,25 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
+import wifilocation.background.database.DatabaseHelper;
+import wifilocation.background.database.ItemInfo;
+import wifilocation.background.serverconnection.RetrofitAPI;
+import wifilocation.background.serverconnection.RetrofitClient;
 import wifilocation.background.service.EstimateLoggingService;
 
 public class MainActivity extends AppCompatActivity {
@@ -61,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         uuid = getDevicesUUID(this);
+        LoadRemoteTask loadRemoteTask = new LoadRemoteTask(this);
+        loadRemoteTask.execute();
     }
 
     private void getPermission() {
@@ -94,5 +105,58 @@ public class MainActivity extends AppCompatActivity {
         UUID deviceUuid = new UUID(androidId.hashCode(), ((long) tmDevice.hashCode() << 32) | tmSerial.hashCode());
         String deviceId = deviceUuid.toString();
         return deviceId;
+    }
+
+    private class LoadRemoteTask extends AsyncTask<String, String, String> {
+
+        ProgressDialog progressDialog;
+        DatabaseHelper dbHelper;
+
+        public LoadRemoteTask(Context context) {
+            this.progressDialog = new ProgressDialog(context);
+            this.dbHelper = new DatabaseHelper(context);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+            super.onPreExecute();
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+            dbHelper.deleteWiFiInfo();
+            publishProgress("데이터 받아오는 중...");
+            loadRemote();
+            return "데이터 받아오기 완료";
+        }
+
+        @Override
+        protected void onProgressUpdate(String... progress) {
+            if (progress.length > 0) {
+                progressDialog.setMessage(progress[0]);
+            }
+            super.onProgressUpdate(progress);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            progressDialog.dismiss();
+            Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
+            super.onPostExecute(result);
+        }
+
+        private void loadRemote() {
+            System.out.println("EstimateLoggingService.loadRemote");
+            RetrofitAPI retrofitAPI = RetrofitClient.getRetrofitAPI();
+            try {
+                List<ItemInfo> result = retrofitAPI.getDataWiFiItem(null, null, null, null, null, null).execute().body();
+                dbHelper.insertIntoWiFiInfo(result);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import wifilocation.background.database.EstimatedResult;
@@ -237,6 +238,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     /**
+     * fingerprint 테이블에서 데이터 삭제
+     */
+    public void deleteWiFiInfo() {
+        SQLiteDatabase db = getWritableDatabase();
+        db.execSQL("delete from " + TABLE_WIFIINFO);
+    }
+
+    /**
      * fingerprint 테이블에 데이터 추가
      *
      * @param items 추정된 위치 정보 리스트 전달
@@ -296,6 +305,44 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         List<EstimatedResult> result = new ArrayList<EstimatedResult>();
         int count = cursor.getCount();
         for (int i = 0; i < count; i++) {
+            cursor.moveToNext();
+            result.add(new EstimatedResult(cursor.getString(cursor.getColumnIndex(BUILDING)),
+                    cursor.getString(cursor.getColumnIndex(SSID)),
+                    cursor.getFloat(cursor.getColumnIndex(POS_X)),
+                    cursor.getFloat(cursor.getColumnIndex(POS_Y)),
+                    cursor.getFloat(cursor.getColumnIndex(EST_X)),
+                    cursor.getFloat(cursor.getColumnIndex(EST_Y)),
+                    cursor.getString(cursor.getColumnIndex(UUID)),
+                    cursor.getString(cursor.getColumnIndex(METHOD)),
+                    cursor.getInt(cursor.getColumnIndex(K)),
+                    cursor.getInt(cursor.getColumnIndex(THRESHOLD)),
+                    cursor.getInt(cursor.getColumnIndex(ALGORITHM_VERSION)),
+                    cursor.getLong(cursor.getColumnIndex(DATE))));
+        }
+        return result;
+    }
+
+    /**
+     * 오늘 측정된 fingerprint 테이블에서 서버에 아직 올라가지 않은 row를 반환
+     *
+     * @return sql문 실행 결과로 나온 row들을 List<EstimateResult> 로 바꿔서 반환
+     */
+    @SuppressLint("Range")
+    public List<EstimatedResult> loadItemsAfter(Long count, Date today) {
+        StringBuilder sql = new StringBuilder("select" + String.format(" %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ", POS_X, POS_Y, UUID, DATE, EST_X, EST_Y, K, THRESHOLD, BUILDING, SSID, ALGORITHM_VERSION, METHOD) +
+                "from " + TABLE_FINGERPRINT +
+                " where date >= " + today.getTime() +
+                " LIMIT -1 OFFSET " + count);
+        List<String> conditions = new ArrayList<String>();
+
+        Log.d("ㅎㅎ", sql.toString());
+
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(sql.toString(), null);
+
+        List<EstimatedResult> result = new ArrayList<EstimatedResult>();
+        int cnt = cursor.getCount();
+        for (int i = 0; i < cnt; i++) {
             cursor.moveToNext();
             result.add(new EstimatedResult(cursor.getString(cursor.getColumnIndex(BUILDING)),
                     cursor.getString(cursor.getColumnIndex(SSID)),

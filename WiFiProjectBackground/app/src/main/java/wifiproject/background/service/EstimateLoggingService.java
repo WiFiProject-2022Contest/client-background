@@ -3,6 +3,7 @@ package wifilocation.background.service;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -16,6 +17,7 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
@@ -36,6 +38,8 @@ import wifilocation.background.estimate.PositioningAlgorithm;
 import wifilocation.background.serverconnection.PushResultModel;
 import wifilocation.background.serverconnection.RetrofitAPI;
 import wifilocation.background.serverconnection.RetrofitClient;
+import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 
 public class EstimateLoggingService extends Service {
@@ -48,13 +52,14 @@ public class EstimateLoggingService extends Service {
     WifiManager wm;
     List<ItemInfo> items = new ArrayList<>();
     List<ItemInfo> savedItemInfos = new ArrayList<>();
-    DatabaseHelper dbHelper = new DatabaseHelper(context);
+    DatabaseHelper dbHelper;
 
     final static double standardRecordDistance = 8;
 
     SharedPreferences sp;
     SharedPreferences.Editor edit;
-    Long count;
+    Long count = 0L;
+    Date date;
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -79,6 +84,7 @@ public class EstimateLoggingService extends Service {
         super.onCreate();
 
         context = this;
+        dbHelper = new DatabaseHelper(context);
         wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
 
         IntentFilter filter = new IntentFilter();
@@ -88,7 +94,7 @@ public class EstimateLoggingService extends Service {
         sp = getSharedPreferences("sp", MODE_PRIVATE);
         edit = sp.edit();
 
-        Date date = new Date();
+        date = new Date();
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
         String today = dateFormat.format(date);
         String last_saved = sp.getString("last_date", today);
@@ -149,8 +155,8 @@ public class EstimateLoggingService extends Service {
         protected Void doInBackground(Void... voids) {
             while (!isCancelled()) {
                 try {
-                    wm.startScan();
                     Thread.sleep(10000);
+                    wm.startScan();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -199,20 +205,22 @@ public class EstimateLoggingService extends Service {
     }
 
 
+
+
+
     private class EstimateLoggingRunnable implements Runnable {
         @Override
         public void run() {
             List<EstimatedResult> estimatedResults = getEstimatedResults();
             dbHelper.insertIntoFingerprint(estimatedResults);
             if (isNetworkAvailable()) {
-                // TODO: count 이후로만 로컬에서 로드
-                List<EstimatedResult> afterCount = new ArrayList<>();
+                List<EstimatedResult> afterCount = dbHelper.loadItemsAfter(count, date);
                 pushRemote(afterCount);
             }
         }
 
         private List<EstimatedResult> getEstimatedResults() {
-            savedItemInfos = dbHelper.searchFromWiFiInfo(null, null, null, null, null, null);
+            savedItemInfos = dbHelper.searchFromWiFiInfo(MainActivity.building, MainActivity.ssid, null, null, null, null);
             List<EstimatedResult> results = new ArrayList<EstimatedResult>();
 
             // 2ghz
