@@ -17,6 +17,7 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Vibrator;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -60,6 +61,7 @@ public class EstimateLoggingService extends Service {
     SharedPreferences.Editor edit;
     Long count = 0L;
     Date date;
+    Vibrator vib;
 
     private BroadcastReceiver wifi_receiver = new BroadcastReceiver() {
         @Override
@@ -83,6 +85,7 @@ public class EstimateLoggingService extends Service {
     public void onCreate() {
         super.onCreate();
 
+        vib = (Vibrator)getSystemService(VIBRATOR_SERVICE);
         context = this;
         dbHelper = new DatabaseHelper(context);
         wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
@@ -192,6 +195,7 @@ public class EstimateLoggingService extends Service {
             items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi", 1));
         }
         Toast.makeText(context, "WiFi Scan Success!", Toast.LENGTH_SHORT).show();
+        vib.vibrate(1000);
         dbHelper.insertIntoWiFiInfo(items);
 
 //        EstimateLoggingRunnable estimateLoggingRunnable = new EstimateLoggingRunnable();
