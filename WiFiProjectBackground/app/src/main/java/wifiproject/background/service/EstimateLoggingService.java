@@ -204,10 +204,6 @@ public class EstimateLoggingService extends Service {
         wm.getScanResults();
     }
 
-
-
-
-
     private class EstimateLoggingRunnable implements Runnable {
         @Override
         public void run() {
