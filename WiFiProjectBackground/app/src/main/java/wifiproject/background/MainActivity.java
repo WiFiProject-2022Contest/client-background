@@ -70,8 +70,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         uuid = getDevicesUUID(this);
-        LoadRemoteTask loadRemoteTask = new LoadRemoteTask(this);
-        loadRemoteTask.execute();
+//        LoadRemoteTask loadRemoteTask = new LoadRemoteTask(this);
+//        loadRemoteTask.execute();
     }
 
     private void getPermission() {

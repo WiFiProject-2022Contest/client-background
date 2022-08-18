@@ -192,11 +192,11 @@ public class EstimateLoggingService extends Service {
             items.add(new ItemInfo(0.0f, 0.0f, result.SSID, result.BSSID, result.level, result.frequency, MainActivity.uuid, MainActivity.building, "WiFi", 1));
         }
         Toast.makeText(context, "WiFi Scan Success!", Toast.LENGTH_SHORT).show();
+        dbHelper.insertIntoWiFiInfo(items);
 
-
-        EstimateLoggingRunnable estimateLoggingRunnable = new EstimateLoggingRunnable();
-        Thread t = new Thread(estimateLoggingRunnable);
-        t.start();
+//        EstimateLoggingRunnable estimateLoggingRunnable = new EstimateLoggingRunnable();
+//        Thread t = new Thread(estimateLoggingRunnable);
+//        t.start();
     }
 
     private void scanFailure() {
